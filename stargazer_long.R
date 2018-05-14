@@ -1,6 +1,7 @@
 ## Original source:
 # Stargazer tables by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
 # Stargazer_long modification by Marcus Vollmer, University Medicine Greifswald, Germany, 11 April 2017
+# Last modified: 14 May 2018
 
 library(stargazer)
 library(stringr)
@@ -13,7 +14,7 @@ stargazer_long = function(x, summary=FALSE, rownames=FALSE, single.row=FALSE, ou
   out = sub("\\\\label\\{\\}", "", out)
   out = sub("\\\\end\\{table\\}", "", out)
   out = sub("\\{tabular\\}", "\\{longtable\\}", out)
-  if (output!="") { out[7] = sub(paste0(rep("c", str_count(output,"c")+str_count(output,"p")-str_count(output,"m")), collapse=""), output, out[7]) }
+  if (output!="") { out[7] = sub(paste0(rep("c", str_count(output,"c")+str_count(output,"r")+str_count(output,"l")+str_count(output,"p")-str_count(output,"m")), collapse=""), output, out[7]) }
   out = out[7:NROW(out)]
   if (rotate!=0) {
     out[4] = gsub("&", paste0("} & \\\\rotatebox\\{", rotate, "\\}\\{"), out[4])

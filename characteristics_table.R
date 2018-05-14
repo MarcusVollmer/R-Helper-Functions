@@ -1,15 +1,15 @@
 ## Original source:
 # characteristics_table by Marcus Vollmer, University Medicine Greifswald, Germany, 11 April 2017
-# Last modified: 29 June 2017
+# Last modified: 14 May 2018
 #
-# s = characteristics_table(-1, "Betablocker", ds5d, "col", prec="%.1f%%")
+# s = characteristics_table(-1, "Betablocker", ds5d, "col", prec="%.1f")
 # require(xtable)
 # out = capture.output(xtable(s, align="rp{4cm}p{3cm}rrrr"))
 # out = out[6:NROW(out)-1]
 # out = sub("\\{tabular\\}", "\\{longtable\\}", out)
 # cat(out)
 
-characteristics_table = function(x, y, D, rowcol, prec="%.1f%%", prec_continuous="%.0f", latex="empty"){
+characteristics_table = function(x, y, D, rowcol, prec="%.1f", prec_continuous="%.0f", prec_p="%.4f", latex="empty"){
   j=1
   if (rowcol=="row") { rc=1 } else { rc=2}
   if (x==-1){
@@ -22,6 +22,10 @@ characteristics_table = function(x, y, D, rowcol, prec="%.1f%%", prec_continuous
       x = setdiff(x,y)
       x2 = variable.names(D)[sapply(D, class)=="integer" | sapply(D, class)=="numeric"]
     }  
+  }
+  
+  if (class(D[,y])=="logical"){
+    D[,y] = as.factor(D[,y])
   }
   
   
@@ -48,7 +52,7 @@ characteristics_table = function(x, y, D, rowcol, prec="%.1f%%", prec_continuous
       #s = rbind(s, data.frame(t(cbind(c(Variable="", Level=""), c(No="", Yes=""), c(P="", NAs=NA))), stringsAsFactors=FALSE))
       if (k==1) {
         s$Variable[j] = x[i]
-        s$P[j] = sprintf("%.4f",t_p$p.value)
+        s$P[j] = sprintf(prec_p,t_p$p.value)
         s$NAs[j] = NROW(D)-sum(t)
       }
       s$Level[j] = row.names(t)[k]
@@ -63,8 +67,9 @@ characteristics_table = function(x, y, D, rowcol, prec="%.1f%%", prec_continuous
     for (i in 1:length(x2)) {
       jj = which(names(D)==x2[i])
       
+      # Median with quartiles and ranksum test
       s = rbind(s, data.frame(t(c(Variable="", Level="", No="", Yes="", P="", NAs=NA)), stringsAsFactors=FALSE))
-      s$P[j] = sprintf("%.4f", wilcox.test(D[D[,y]==levels(D[,y])[1],jj], D[D[,y]==levels(D[,y])[2],jj])$p.value)
+      s$P[j] = sprintf(prec_p, wilcox.test(D[D[,y]==levels(D[,y])[1],jj], D[D[,y]==levels(D[,y])[2],jj])$p.value)
       
       q1 = quantile(D[D[,y]==levels(D[,y])[1],jj], c(.25, .5, .75), na.rm=TRUE)
       q2 = quantile(D[D[,y]==levels(D[,y])[2],jj], c(.25, .5, .75), na.rm=TRUE)
@@ -76,11 +81,31 @@ characteristics_table = function(x, y, D, rowcol, prec="%.1f%%", prec_continuous
       s$Variable[j] = x2[i]
       s$NAs[j] = sum(is.na(D[,jj]))
       j=j+1
+      
+      # Mean with standard deviation and t-test
+      s = rbind(s, data.frame(t(c(Variable="", Level="", No="", Yes="", P="", NAs=NA)), stringsAsFactors=FALSE))
+      s$P[j] = sprintf(prec_p, t.test(D[D[,y]==levels(D[,y])[1],jj], D[D[,y]==levels(D[,y])[2],jj])$p.value)
+      
+      
+      mean1 = mean(D[D[,y]==levels(D[,y])[1],jj], na.rm=TRUE)
+      sd1 = sd(D[D[,y]==levels(D[,y])[1],jj], na.rm=TRUE)
+      mean2 = mean(D[D[,y]==levels(D[,y])[2],jj], na.rm=TRUE)
+      sd2 = sd(D[D[,y]==levels(D[,y])[2],jj], na.rm=TRUE)
+      
+      s$No[j] = paste0(sprintf(prec_continuous,mean1), " (", sprintf(prec_continuous,sd1), ")")
+      s$Yes[j] = paste0(sprintf(prec_continuous,mean2), " (", sprintf(prec_continuous,sd2), ")")
+      
+      s$Level[j] = "Mean (SD)"
+      s$Variable[j] = x2[i]
+      s$NAs[j] = sum(is.na(D[,jj]))
+      j=j+1      
     }
   }
   
-  colnames(s)[3:4] = levels(D[,y])  
-
+  if (!is.null(levels(D[,y]))) {
+    colnames(s)[3:4] = levels(D[,y])  
+  }
+  
 # Output as LaTeX longtable
   if (latex=="empty") {
     return(s)
