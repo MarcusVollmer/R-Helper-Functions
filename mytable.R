@@ -1,6 +1,6 @@
 ## Original source:
 # mytable by Marcus Vollmer, University Medicine Greifswald, Germany, 11 April 2017
-# Last modified: 14 May 2018
+# Last modified: 19 June 2018
 
 mytable = function(x, y, ci=FALSE, prec="%.1f", latex="empty", pct_sign=FALSE){
   if (pct_sign==FALSE) {
@@ -71,6 +71,8 @@ mytable = function(x, y, ci=FALSE, prec="%.1f", latex="empty", pct_sign=FALSE){
     if (latex==TRUE) {
       latex = strrep('r',NCOL(t)+1)
     }
-    stargazer_long(as.data.frame.matrix(t), summary=FALSE, rownames=TRUE, output=latex)
+    out = capture.output(stargazer_long(as.data.frame.matrix(t), summary=FALSE, rownames=TRUE, output=latex))
+    out = sub("end\\{longtable", paste0("multicolumn\\{", NCOL(t)+1, "\\}\\{l\\}\\{", testresult, "\\}\\\\end\\{longtable"), out)
+    return(cat(out))
   }
 }
