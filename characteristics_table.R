@@ -1,17 +1,21 @@
 ## Original source:
 # characteristics_table by Marcus Vollmer, University Medicine Greifswald, Germany, 11 April 2017
-# Last modified: 14 May 2018
+# Last modified: 22 June 2018
 #
-# s = characteristics_table(-1, "Betablocker", ds5d, "col", prec="%.1f")
-# require(xtable)
-# out = capture.output(xtable(s, align="rp{4cm}p{3cm}rrrr"))
-# out = out[6:NROW(out)-1]
-# out = sub("\\{tabular\\}", "\\{longtable\\}", out)
-# cat(out)
+#
 
-characteristics_table = function(x, y, D, rowcol, prec="%.1f", prec_continuous="%.0f", prec_p="%.4f", latex="empty"){
-  j=1
-  if (rowcol=="row") { rc=1 } else { rc=2}
+characteristics_table = function(x, y, D, rowcol, prec="%.1f", prec_continuous="%.0f", prec_p="%.4f", latex="empty", tablefootnote=TRUE, fn=c("\u00B9","\u00B2","\u00B3","\u2074","\u2075","\u2076"), fn_warn="*"){
+  tests = rep(0,length(fn))
+  tests_label = c("Chi-squared test", "Fisher's exact test", "Kruskal-Wallis rank sum test", "Wilcoxon rank sum test", "One-way analysis of variance (ANOVA)", "Student's t-test")
+  
+  # Handle warnings
+  wa = FALSE
+  oldw <- getOption("warn")
+  options(warn=0)
+  #assign("last.warning", NULL, envir = baseenv())
+  
+# Identify feature classes
+  if (rowcol=="row") { rc=1 } else { rc=2 }
   if (x==-1){
     x = variable.names(D)[sapply(D, class)=="factor" | sapply(D, class)=="logical"]
     x = setdiff(x,y)
@@ -28,12 +32,18 @@ characteristics_table = function(x, y, D, rowcol, prec="%.1f", prec_continuous="
     D[,y] = as.factor(D[,y])
   }
   
+# Initialize data frame
+  s1 = data.frame(Variable=character(), Level=character(), P=character(), NAs=integer(), stringsAsFactors=FALSE)
+  s2 = model.matrix(as.formula(paste(x[1], "~", y, "-1")), D[0,]) 
+  colnames(s2) = levels(D[,y])
+  s = cbind(s1, s2)
+  new.row = s[1,][NA,]
+  new.row$Variable = ""
+  new.row$P = ""
+  new.row$NAs = ""
   
-  # Table for categorical variables
-#  library(tidyr)
-#  spread(data.frame(Variable=character(), Level=character()), levels(D[,y]))
-#  s = cbind(, data.frame(levels(D[,y])=character()), data.frame(P=character(), NAs=integer(), stringsAsFactors=FALSE))
-  s = data.frame(Variable=character(), Level=character(), No=character(), Yes=character(), P=character(), NAs=integer(), stringsAsFactors=FALSE)
+# Table for categorical variables
+  j=1
   for (i in 1:length(x)) {
     jj = which(names(D)==x[i])
     if (class(D[,jj])=="logical") {
@@ -44,76 +54,142 @@ characteristics_table = function(x, y, D, rowcol, prec="%.1f", prec_continuous="
     t_pct = replace(t, TRUE, sprintf(prec, prop.table(t,rc)*100))
     
     if (prod(dim(t))>2) {
-      if (prod(dim(t))>6) { t_p = chisq.test(t) } else { t_p = fisher.test(t) }
-    } else { t_p$p.value=NA }
+      if (prod(dim(t))>6) { 
+        t_p = chisq.test(t)
+        test = 1
+      } else {
+          t_p = fisher.test(t)
+          test = 2
+      }
+    } else { 
+      t_p$p.value=NA
+      test = NA
+    }
+
     
     for (k in 1:NROW(t)) {
-      s = rbind(s, data.frame(t(c(Variable="", Level="", No="", Yes="", P="", NAs=NA)), stringsAsFactors=FALSE))
-      #s = rbind(s, data.frame(t(cbind(c(Variable="", Level=""), c(No="", Yes=""), c(P="", NAs=NA))), stringsAsFactors=FALSE))
+      s = rbind(s, new.row)
       if (k==1) {
         s$Variable[j] = x[i]
-        s$P[j] = sprintf(prec_p,t_p$p.value)
         s$NAs[j] = NROW(D)-sum(t)
+        s$P[j] = sprintf(prec_p,t_p$p.value)
+        
+        if (tablefootnote==TRUE & !is.na(test)) {
+          s$P[j] = paste0(s$P[j], fn[test])
+          tests[test] = 1          
+        }
+        
+        # Handling of warnings
+        if (test==1) {
+          tryCatch( t_p <- chisq.test(t),
+            warning = function(w) {
+              wa <<- TRUE
+              s$P[j] <<- paste0(s$P[j], fn_warn)
+            }
+          )
+        }
       }
       s$Level[j] = row.names(t)[k]
-      s$No[j] = paste0(sprintf("%i",t[k,1]), " (", t_pct[k,1], ")")
-      s$Yes[j] = paste0(sprintf("%i",t[k,2]), " (", t_pct[k,2], ")")
+      for (l in 1:NROW(levels(D[,y]))) {
+        s[j,levels(D[,y])[l]] = paste0(sprintf("%i",t[k,l]), " (", t_pct[k,l], ")")
+      }
       j=j+1
     }
   }
   
-  # Table for continuous variables
+# Table for continuous variables
   if (length(x2)>0) {
     for (i in 1:length(x2)) {
       jj = which(names(D)==x2[i])
       
-      # Median with quartiles and ranksum test
-      s = rbind(s, data.frame(t(c(Variable="", Level="", No="", Yes="", P="", NAs=NA)), stringsAsFactors=FALSE))
-      s$P[j] = sprintf(prec_p, wilcox.test(D[D[,y]==levels(D[,y])[1],jj], D[D[,y]==levels(D[,y])[2],jj])$p.value)
+      # Median with quartiles and parameter-free test (rankbased)
+      s = rbind(s, new.row)
+      if (NROW(levels(D[,y]))>1) {
+        if (NROW(levels(D[,y]))>2) {
+          s$P[j] = sprintf(prec_p, kruskal.test(D[,jj], D[,y])$p.value)
+          test = 3
+        } else { 
+          s$P[j] = sprintf(prec_p, wilcox.test(D[D[,y]==levels(D[,y])[1],jj], D[D[,y]==levels(D[,y])[2],jj])$p.value)
+          test = 4
+        }
+      } else {
+        s$P[j]=NA
+        test = NA
+      }
       
-      q1 = quantile(D[D[,y]==levels(D[,y])[1],jj], c(.25, .5, .75), na.rm=TRUE)
-      q2 = quantile(D[D[,y]==levels(D[,y])[2],jj], c(.25, .5, .75), na.rm=TRUE)
       
-      s$No[j] = paste0(sprintf(prec_continuous,q1[2]), " (", sprintf(prec_continuous,q1[1]), ",", sprintf(prec_continuous,q1[3]), ")")
-      s$Yes[j] = paste0(sprintf(prec_continuous,q2[2]), " (", sprintf(prec_continuous,q2[1]), ",", sprintf(prec_continuous,q2[3]), ")")
+      if (tablefootnote==TRUE & !is.na(test)) {
+        s$P[j] = paste0(s$P[j], fn[test])
+        tests[test] = 1
+      }
       
+      for (l in 1:NROW(levels(D[,y]))) {
+        q = quantile(D[D[,y]==levels(D[,y])[l],jj], c(.25, .5, .75), na.rm=TRUE)
+        s[j,levels(D[,y])[l]] = paste0(sprintf(prec_continuous,q[2]), " (", sprintf(prec_continuous,q[1]), ",", sprintf(prec_continuous,q[3]), ")")
+      }
+
       s$Level[j] = "Median (Quartiles)"
       s$Variable[j] = x2[i]
       s$NAs[j] = sum(is.na(D[,jj]))
       j=j+1
       
-      # Mean with standard deviation and t-test
-      s = rbind(s, data.frame(t(c(Variable="", Level="", No="", Yes="", P="", NAs=NA)), stringsAsFactors=FALSE))
-      s$P[j] = sprintf(prec_p, t.test(D[D[,y]==levels(D[,y])[1],jj], D[D[,y]==levels(D[,y])[2],jj])$p.value)
+      # Mean with standard deviation and parameter test
+      s = rbind(s, new.row)
+      if (NROW(levels(D[,y]))>1) {
+        if (NROW(levels(D[,y]))>2) {
+          s$P[j] = sprintf(prec_p, summary(aov(as.formula(paste(x2[i], "~", y)), data=D))[[1]][["Pr(>F)"]][1])
+          test = 5
+        } else { 
+          s$P[j] = sprintf(prec_p, t.test(D[,jj]~D[,y])$p.value)
+          test = 6
+        }
+      } else { 
+        s$P[j]=NA 
+        test = NA
+      }
       
-      
-      mean1 = mean(D[D[,y]==levels(D[,y])[1],jj], na.rm=TRUE)
-      sd1 = sd(D[D[,y]==levels(D[,y])[1],jj], na.rm=TRUE)
-      mean2 = mean(D[D[,y]==levels(D[,y])[2],jj], na.rm=TRUE)
-      sd2 = sd(D[D[,y]==levels(D[,y])[2],jj], na.rm=TRUE)
-      
-      s$No[j] = paste0(sprintf(prec_continuous,mean1), " (", sprintf(prec_continuous,sd1), ")")
-      s$Yes[j] = paste0(sprintf(prec_continuous,mean2), " (", sprintf(prec_continuous,sd2), ")")
-      
+      if (tablefootnote==TRUE & !is.na(test)) {
+        s$P[j] = paste0(s$P[j], fn[test])
+        tests[test] = 1
+      }
+
+      for (l in 1:NROW(levels(D[,y]))) {
+        mean1 = mean(D[D[,y]==levels(D[,y])[1],jj], na.rm=TRUE)
+        sd1 = sd(D[D[,y]==levels(D[,y])[1],jj], na.rm=TRUE)
+        s[j,levels(D[,y])[l]] = paste0(sprintf(prec_continuous,mean1), " (", sprintf(prec_continuous,sd1), ")")
+      }
+
       s$Level[j] = "Mean (SD)"
       s$Variable[j] = x2[i]
       s$NAs[j] = sum(is.na(D[,jj]))
       j=j+1      
     }
   }
+  s = s[,c(1:2,5:NCOL(s),3:4)]
   
-  if (!is.null(levels(D[,y]))) {
-    colnames(s)[3:4] = levels(D[,y])  
-  }
+# Restore warnings option
+  options(warn = oldw)
   
 # Output as LaTeX longtable
   if (latex=="empty") {
     return(s)
   } else {
-    require(xtable)
-    out = capture.output(xtable(s, align=latex))
-    out = out[6:NROW(out)-1]
-    out = sub("\\{tabular\\}", "\\{longtable\\}", out)
+    source("stargazer_long.R")
+    out = capture.output(stargazer_long(s, summary=FALSE, rownames=FALSE, output=latex))
+    if (tablefootnote==TRUE) {
+      if (wa==TRUE) {
+        fn1 = paste0("\\\\multicolumn\\{", NCOL(s), "\\}\\{l\\}\\{", "$\\ ^\\{\\\\textasteriskcentered\\}$ Chi-squared approximation may be incorrect", "\\}\\\\\\\\ ")
+      } else {fn1=""}
+      
+      fn2 = ""
+      for (i in 1:length(tests)) {
+        if (tests[i]==1) {
+          fn2 = paste(fn2, paste0("\\\\multicolumn\\{", NCOL(s), "\\}\\{l\\}\\{", fn[i], " ", tests_label[i], "\\}\\\\\\\\ "))
+        }
+      }
+      
+      out = sub("\\\\end\\{longtable", paste0(fn1, fn2, "\\\\end\\{longtable"), out)
+    }
     return(cat(out))
   }
   
