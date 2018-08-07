@@ -1,8 +1,8 @@
 ## Original source:
 # mytable by Marcus Vollmer, University Medicine Greifswald, Germany, 11 April 2017
-# Last modified: 19 June 2018
+# Last modified: 07 August 2018
 
-mytable = function(x, y, ci=FALSE, prec="%.1f", latex="empty", pct_sign=FALSE){
+mytable = function(x, y, ci=FALSE, prec="%.1f", prec_p="%.2e", latex="empty", pct_sign=FALSE){
   if (pct_sign==FALSE) {
     pct_sign=''
   }
@@ -34,10 +34,10 @@ mytable = function(x, y, ci=FALSE, prec="%.1f", latex="empty", pct_sign=FALSE){
   # Perform homogeneity test
   if (prod(dim(t))>6) {
     t_p = chisq.test(t)
-    testresult = paste0("Pearson's Chi-squared test: p-Value=", sprintf("%.2e",t_p$p.value))    
+    testresult = paste0("Pearson's Chi-squared test: p-Value=", sprintf(prec_p,t_p$p.value))    
   } else {
     t_p = fisher.test(t)
-    testresult = paste0("Fisher's Exact Test for Count Data: p-Value=", sprintf("%.2e",t_p$p.value))
+    testresult = paste0("Fisher's Exact Test for Count Data: p-Value=", sprintf(prec_p,t_p$p.value))
   }
   
   # Cat results
