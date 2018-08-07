@@ -154,8 +154,8 @@ characteristics_table = function(x, y, D, rowcol, prec="%.1f", prec_continuous="
       }
 
       for (l in 1:NROW(levels(D[,y]))) {
-        mean1 = mean(D[D[,y]==levels(D[,y])[1],jj], na.rm=TRUE)
-        sd1 = sd(D[D[,y]==levels(D[,y])[1],jj], na.rm=TRUE)
+        mean1 = mean(D[D[,y]==levels(D[,y])[l],jj], na.rm=TRUE)
+        sd1 = sd(D[D[,y]==levels(D[,y])[l],jj], na.rm=TRUE)
         s[j,levels(D[,y])[l]] = paste0(sprintf(prec_continuous,mean1), " (", sprintf(prec_continuous,sd1), ")")
       }
 
