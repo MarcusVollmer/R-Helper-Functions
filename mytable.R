@@ -136,7 +136,7 @@ mytable = function(x, y, z=NULL, ci=FALSE, prec="%.1f", prec_p="%.2e", latex="em
               }, warning = function(w) {
                 wa <<- TRUE
                 warn_message <<- "Cannot compute exact p-value with ties"
-                p_row[j] <<- paste0(sprintf(prec_p, t_p$p.value), fn_warn)
+                p_row[j] <<- paste0(sprintf(prec_p, wilcox.test(as.formula("z~g"), data=D[x==rn[j],])$p.value), fn_warn)
               }
             )
           }          
