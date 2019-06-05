@@ -6,7 +6,7 @@
 
 characteristics_table = function(x, y, D, rowcol, prec="%.1f", prec_continuous="%.0f", prec_p="%.4f", latex="empty", tablefootnote=TRUE, fn=c("\u00B9","\u00B2","\u00B3","\u2074","\u2075","\u2076"), fn_warn="*"){
   tests = rep(0,length(fn))
-  tests_label = c("Chi-squared test", "Fisher's exact test", "Kruskal-Wallis rank sum test", "Wilcoxon rank sum test", "One-way analysis of variance (ANOVA)", "Student's t-test")
+  tests_label = c("Chi-squared test", "Fisher's exact test", "Kruskal-Wallis rank sum test", "Wilcoxon rank sum test", "One-way analysis of variance (ANOVA)", "Welch's t-test")
   
   # Handle warnings
   wa = FALSE
