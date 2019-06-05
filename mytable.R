@@ -163,7 +163,9 @@ mytable = function(x, y, z=NULL, ci=FALSE, prec="%.1f", prec_p="%.2e", latex="em
     if (latex==TRUE) {
       latex = strrep('r', NCOL(t)+1)
     }
-    source("stargazer_long.R")
+    library(devtools)
+    repo = "https://raw.githubusercontent.com/MarcusVollmer/R-Helper-Functions/master/"
+    source_url(paste0(repo,"stargazer_long.R"))
     out = capture.output(stargazer_long(as.data.frame.matrix(t), summary=FALSE, rownames=TRUE, output=latex))
     if (tablefootnote==TRUE) {
       if (wa==TRUE) {

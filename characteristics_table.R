@@ -174,7 +174,9 @@ characteristics_table = function(x, y, D, rowcol, prec="%.1f", prec_continuous="
   if (latex=="empty") {
     return(s)
   } else {
-    source("stargazer_long.R")
+    library(devtools)
+    repo = "https://raw.githubusercontent.com/MarcusVollmer/R-Helper-Functions/master/"
+    source_url(paste0(repo,"stargazer_long.R"))
     out = capture.output(stargazer_long(s, summary=FALSE, rownames=FALSE, output=latex))
     if (tablefootnote==TRUE) {
       if (wa==TRUE) {
