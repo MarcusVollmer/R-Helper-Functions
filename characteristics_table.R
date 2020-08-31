@@ -1,6 +1,6 @@
 ## Original source:
 # characteristics_table by Marcus Vollmer, University Medicine Greifswald, Germany, 11 April 2017
-# Last modified: 22 June 2018
+# Last modified: 31 August 2020
 #
 #
 
@@ -76,17 +76,19 @@ characteristics_table = function(x, y, D, rowcol, prec="%.1f", prec_continuous="
         
         if (tablefootnote==TRUE & !is.na(test)) {
           s$P[j] = paste0(s$P[j], fn[test])
-          tests[test] = 1          
+          tests[test] = 1
         }
         
         # Handling of warnings
-        if (test==1) {
-          tryCatch( t_p <- chisq.test(t),
-            warning = function(w) {
-              wa <<- TRUE
-              s$P[j] <<- paste0(s$P[j], fn_warn)
+        if (!is.na(test)) {
+            if (test==1) {
+              tryCatch( t_p <- chisq.test(t),
+                warning = function(w) {
+                  wa <<- TRUE
+                  s$P[j] <<- paste0(s$P[j], fn_warn)
+                }
+              )
             }
-          )
         }
       }
       s$Level[j] = row.names(t)[k]
