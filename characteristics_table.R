@@ -101,6 +101,7 @@ characteristics_table = function(x, y, D, rowcol, prec="%.1f", prec_continuous="
         }
       }
     } else {
+      s = rbind(s, new.row)
       s$Variable[j] = x[i]
       s$NAs[j] = NROW(D)-sum(t)
       s$P[j] = "NA"
