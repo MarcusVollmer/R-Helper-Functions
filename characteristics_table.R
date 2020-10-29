@@ -1,6 +1,6 @@
 ## Original source:
 # characteristics_table by Marcus Vollmer, University Medicine Greifswald, Germany, 11 April 2017
-# Last modified: 31 August 2020
+# Last modified: 29 October 2020
 #
 #
 
@@ -51,50 +51,59 @@ characteristics_table = function(x, y, D, rowcol, prec="%.1f", prec_continuous="
     } else {
       t = table(D[,jj], D[,y])
     }
-    t_pct = replace(t, TRUE, sprintf(prec, prop.table(t,rc)*100))
-    
-    if (prod(dim(t))>2) {
-      if (prod(dim(t))>6) { 
-        t_p = chisq.test(t)
-        test = 1
-      } else {
-          t_p = fisher.test(t)
-          test = 2
-      }
-    } else { 
-      t_p$p.value=NA
-      test = NA
-    }
-
-    
-    for (k in 1:NROW(t)) {
-      s = rbind(s, new.row)
-      if (k==1) {
-        s$Variable[j] = x[i]
-        s$NAs[j] = NROW(D)-sum(t)
-        s$P[j] = sprintf(prec_p,t_p$p.value)
-        
-        if (tablefootnote==TRUE & !is.na(test)) {
-          s$P[j] = paste0(s$P[j], fn[test])
-          tests[test] = 1
+    if (NROW(t)>0) {
+      t_pct = replace(t, TRUE, sprintf(prec, prop.table(t,rc)*100))
+      
+      if (prod(dim(t))>2) {
+        if (prod(dim(t))>6) { 
+          t_p = chisq.test(t)
+          test = 1
+        } else {
+            t_p = fisher.test(t)
+            test = 2
         }
-        
-        # Handling of warnings
-        if (!is.na(test)) {
-            if (test==1) {
-              tryCatch( t_p <- chisq.test(t),
-                warning = function(w) {
-                  wa <<- TRUE
-                  s$P[j] <<- paste0(s$P[j], fn_warn)
-                }
-              )
-            }
+      } else { 
+        t_p$p.value=NA
+        test = NA
+      }
+  
+      
+      for (k in 1:NROW(t)) {
+        s = rbind(s, new.row)
+        if (k==1) {
+          s$Variable[j] = x[i]
+          s$NAs[j] = NROW(D)-sum(t)
+          s$P[j] = sprintf(prec_p,t_p$p.value)
+          
+          if (tablefootnote==TRUE & !is.na(test)) {
+            s$P[j] = paste0(s$P[j], fn[test])
+            tests[test] = 1
+          }
+          
+          # Handling of warnings
+          if (!is.na(test)) {
+              if (test==1) {
+                tryCatch( t_p <- chisq.test(t),
+                  warning = function(w) {
+                    wa <<- TRUE
+                    s$P[j] <<- paste0(s$P[j], fn_warn)
+                  }
+                )
+              }
+          }
+        }
+        if (NROW(t)>0) {
+          s$Level[j] = row.names(t)[k]
+          for (l in 1:NROW(levels(D[,y]))) {
+            s[j,levels(D[,y])[l]] = paste0(sprintf("%i",t[k,l]), " (", t_pct[k,l], ")")
+          }
+          j=j+1
         }
       }
-      s$Level[j] = row.names(t)[k]
-      for (l in 1:NROW(levels(D[,y]))) {
-        s[j,levels(D[,y])[l]] = paste0(sprintf("%i",t[k,l]), " (", t_pct[k,l], ")")
-      }
+    } else {
+      s$Variable[j] = x[i]
+      s$NAs[j] = NROW(D)-sum(t)
+      s$P[j] = "NA"
       j=j+1
     }
   }
