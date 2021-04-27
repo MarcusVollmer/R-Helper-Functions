@@ -1,6 +1,6 @@
 ## Original source:
 # mytable by Marcus Vollmer, University Medicine Greifswald, Germany, 11 April 2017
-# Last modified: 08 August 2018
+# Last modified: 27 April 2021
 
 mytable = function(x, y, z=NULL, ci=FALSE, prec="%.1f", prec_p="%.2e", latex="empty", pct_sign=FALSE, tablefootnote=TRUE, fn_warn="*"){
   tests_label = c("Pearson's Chi-squared test", "Fisher's exact test", "Kruskal-Wallis rank sum test", "Wilcoxon rank sum test", "One-way analysis of variance (ANOVA)", "Student's t-test")
@@ -54,6 +54,7 @@ mytable = function(x, y, z=NULL, ci=FALSE, prec="%.1f", prec_p="%.2e", latex="em
           }, warning = function(w) {
             wa <<- TRUE
             warn_message <<- "Chi-squared approximation may be incorrect"
+            t_p <<- chisq.test(t)
             testresult <<- paste0(tests_label[1], ": p-Value=", sprintf(prec_p,t_p$p.value), fn_warn)
           }
         )
